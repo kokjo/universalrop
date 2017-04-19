@@ -14,8 +14,8 @@ def p32(v): return struct.pack("<L", v)
 def u64(v): return struct.unpack("<Q", v)[0]
 def u32(v): return struct.unpack("<L", v)[0]
 
-def disasm(addr, code):
-    cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+def disasm(arch, addr, code):
+    cs = capstone.Cs(arch.capstone_arch, arch.capstone_mode)
     insts = ['%s %s' % (inst.mnemonic, inst.op_str) for inst in cs.disasm(bytes(code), addr)]
     return "; ".join(insts)
 

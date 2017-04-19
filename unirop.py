@@ -7,12 +7,6 @@ from emulator import Emulator
 from z3 import *
 from utils import *
 
-elf_machine_to_arch= {
-    "EM_X86_64": amd64
-}
-
-log = logging.getLogger(__name__)
-
 def combine_regs(arch, fst, snd):
     out = {}
     for reg in arch.regs:
@@ -145,7 +139,6 @@ class RealGadget(Gadget):
         self.move = 0
 
     def analyse(self):
-        log.info("Analysing gadget at 0x%x", self.address)
         ip = self.arch.instruction_pointer
         sp = self.arch.stack_pointer
         emu = Emulator(self.arch)
@@ -177,7 +170,7 @@ class RealGadget(Gadget):
             if init_regs.get(val, None):
                 self.regs[reg] = ("mov", init_regs[val])
                 continue
-            offset = gen_find(p64(val), stack_data)
+            offset = gen_find(self.arch.pack(val), stack_data)
             if offset != -1:
                 self.regs[reg] = ("stack", offset)
 

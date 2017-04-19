@@ -16,6 +16,9 @@ regs = [
 unicorn_arch = unicorn.UC_ARCH_X86
 unicorn_mode = unicorn.UC_MODE_64
 
+capstone_arch = capstone.CS_ARCH_X86
+capstone_mode = capstone.CS_MODE_64
+
 unicorn_regs = {}
 capstone_regs = {}
 
