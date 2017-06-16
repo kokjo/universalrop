@@ -1,10 +1,10 @@
 from emulator import *
 from unirop import *
-import x86, amd64
+import x86, amd64, arm
 
 _amd64_gadgets = [
-#        (0x1000100, "5b5d415c415d415ec3"),
-#        (0x1000101, "5d415c415d415ec3"),
+        (0x1000100, "5b5d415c415d415ec3"),
+        (0x1000101, "5d415c415d415ec3"),
         (0x1000102, "415c415d415ec3"),
         (0x1000104, "415d415ec3"),
         (0x1000106, "415ec3"),
@@ -22,7 +22,13 @@ _amd64_gadgets = [
 
 _x86_gadgets = [
         (0x1000000, "c3"),
-        (0x1000100, "585f83c410c3")
+        (0x1000100, "585f83c410c3"),
+    ]
+
+_arm_gadgets = [
+        (0x1000, "8680bde8"),
+        (0x1010, "0200a0e18080bde8"),
+        (0x1020, "0030a0e117ff2fe1"),
     ]
 
 def analyse_gadget(arch, addr, code):
@@ -30,10 +36,12 @@ def analyse_gadget(arch, addr, code):
     gadget.analyse()
     return gadget
 
-amd64_gadgets = {addr: analyse_gadget(amd64, addr, code.decode("hex"))
-        for addr, code in _amd64_gadgets}
-x86_gadgets = {addr: analyse_gadget(x86, addr, code.decode("hex"))
-        for addr, code in _x86_gadgets}
+def analyse_gadgets(arch, gadgets):
+    return {addr: analyse_gadget(arch, addr, code.decode("hex")) for addr, code in gadgets}
+
+amd64_gadgets = analyse_gadgets(amd64, _amd64_gadgets)
+x86_gadgets = analyse_gadgets(x86, _x86_gadgets)
+arm_gadgets = analyse_gadgets(arm, _arm_gadgets)
 
 def print_gadgets(name, arch, gadgets):
     print name, "Gadgets"
@@ -48,3 +56,4 @@ def print_gadgets(name, arch, gadgets):
 if __name__ == "__main__":
     print_gadgets("amd64", amd64, amd64_gadgets)
     print_gadgets("x86", x86, x86_gadgets)
+    print_gadgets("arm", arm, arm_gadgets)

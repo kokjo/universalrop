@@ -1,7 +1,7 @@
 import unicorn
 import capstone
 import random
-import amd64
+import amd64, x86, arm
 import logging
 from emulator import Emulator
 from z3 import *
@@ -52,7 +52,7 @@ class Gadget(object):
     def use(self, model = None):
         if not model: model = self.model()
         ins, outs, m = model
-        stack_size = outs["rsp"] - ins["rsp"]
+        stack_size = outs[self.arch.sp] - ins[self.arch.sp]
         stack_size = int(str(m.eval(stack_size)))
         return z3_model_read_bytes(m, ins["stack"], 0, stack_size)
 
@@ -146,7 +146,7 @@ class RealGadget(Gadget):
         emu.map_code(self.address, self.code)
 
         stack = get_random_page(self.arch)
-        stack_data = cyclic(self.arch.page_size)
+        stack_data = randoms(self.arch.page_size)
 
         emu.setup_stack(
                 stack,
@@ -194,7 +194,7 @@ class RealGadget(Gadget):
             elif action[0] == "add":
                 outs[reg] = ins[reg] + action[1]
             elif action[0] == "junk":
-                outs[reg] = randint(0, 2**self.arch.bits)
+                outs[reg] = random.randint(0, 2**self.arch.bits)
 
         if self.move >= 0:
             outs["stack"] = z3_read_bits(ins["stack"], self.move * 8)
@@ -235,7 +235,6 @@ class SMTGadget(Gadget):
         state["constraints"] = []
         for gadget in self.gadgets:
             outs = gadget.map(state)
-            
             fini["constraints"].append(z3.Implies(
                 state[self.arch.ip] == gadget.address,
                 z3.And(outs["constraints"]+self.equal_states(fini, outs))
@@ -271,9 +270,9 @@ class amd64Call(Gadget):
         return state
 
 
-class i386Call(Gadget):
+class x86Call(Gadget):
     def __init__(self, address, *args):
-        Gadget.__init__(self, i386)
+        Gadget.__init__(self, x86)
         self.address = address
         self.args = args
         self.move = 4
@@ -286,7 +285,7 @@ class i386Call(Gadget):
 
         outs["stack"] = z3_read_bits(ins["stack"], self.move * 8)
 
-        for i, arg in enumerate(args):
+        for i, arg in enumerate(self.args):
             arg_stack = z3_read_bits(
                     outs["stack"],
                     i*self.arch.bits,
@@ -294,3 +293,19 @@ class i386Call(Gadget):
             outs["constraints"].append(arg_stack == arg)
 
         return outs
+
+class armCall(Gadget):
+    def __init__(self, address, *args):
+        Gadget.__init__(self, arm)
+        self.address = address
+        assert len(args) <= 4
+        self.args = args
+
+    def map(self, state):
+        state = dict(state)
+        state["constraints"] = list(state["constraints"])
+        state["constraints"].append(state[self.arch.ip] == self.address)
+        for reg, arg in zip(("r0", "r1", "r2", "r3"), self.args):
+#            print reg, state[reg], arg
+            state["constraints"].append(state[reg] == arg)
+        return state
